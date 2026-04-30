@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1f4e79">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dalot Béton">
+<title>Calculateur Dalot — Béton</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+/* ==================== VARIABLES ==================== */
+:root{
+  --p:#1f4e79;--pl:#2980b9;--s:#27ae60;--w:#f39c12;--r:#e74c3c;
+  --bg:#f0f2f5;--c:#fff;--t:#1a1a2e;--b:#e8ecf1;--i:#f8f9fa;
+  --shadow:0 2px 12px rgba(0,0,0,.1);
+  --radius:12px;
+  --safe-top: env(safe-area-inset-top, 0);
+  --safe-bottom: env(safe-area-inset-bottom, 0);
+}
+/* ==================== RESET ==================== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t);line-height:1.5;
+  padding-top:var(--safe-top);padding-bottom:calc(var(--safe-bottom) + 70px);min-height:100dvh}
+
+/* ==================== LAYOUT ==================== */
+.m{max-width:1400px;margin:0 auto;padding:.75rem}
+
+/* ==================== HEADER ==================== */
+.header{
+  background:linear-gradient(135deg,var(--p),var(--pl));
+  color:#fff;padding:1.25rem 1.25rem 1rem;
+  margin-bottom:1rem;border-radius:var(--radius);
+  position:relative;overflow:hidden
+}
+.header::before{
+  content:'🏗️';position:absolute;right:-10px;top:-10px;
+  font-size:5rem;opacity:.12;transform:rotate(-15deg)
+}
+.header h1{font-size:1.5rem;margin-bottom:.2rem;position:relative}
+.header p{opacity:.85;font-size:.9rem;position:relative}
+.header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem}
+.dev-credit{margin-top:.6rem;font-size:.75rem;opacity:.75;position:relative;border-top:1px solid rgba(255,255,255,.2);padding-top:.5rem}
+.offline-badge{
+  background:rgba(231,76,60,.85);color:#fff;font-size:.7rem;font-weight:700;
+  padding:.25rem .6rem;border-radius:20px;white-space:nowrap;align-self:flex-start;
+  display:none
+}
+.offline-badge.show{display:block}
+
+/* ==================== TABS (bottom nav on mobile) ==================== */
+.tabs{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--c);border-top:1px solid var(--b);
+  display:flex;z-index:100;
+  padding-bottom:var(--safe-bottom);
+  box-shadow:0 -2px 12px rgba(0,0,0,.08)
+}
+.tab-btn{
+  flex:1;padding:.6rem .25rem .45rem;border:none;background:transparent;
+  cursor:pointer;font-size:.6rem;font-weight:600;color:#888;
+  display:flex;flex-direction:column;align-items:center;gap:.2rem;
+  transition:color .2s;line-height:1
+}
+.tab-btn .ico{font-size:1.3rem;line-height:1}
+.tab-btn:hover{color:var(--pl)}
+.tab-btn.active{color:var(--p)}
+.tab-btn.active .ico-wrap{
+  background:#e3f2fd;border-radius:16px;padding:.1rem .6rem
+}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ==================== CARDS ==================== */
+.card{
+  background:var(--c);border-radius:var(--radius);
+  padding:1.25rem;margin-bottom:.75rem;
+  box-shadow:var(--shadow)
+}
+.card h2{
+  font-size:1rem;color:var(--p);margin-bottom:.85rem;
+  padding-bottom:.4rem;border-bottom:2px solid var(--b);
+  display:flex;align-items:center;gap:.4rem
+}
+.card h3{font-size:.9rem;margin:.85rem 0 .4rem;color:#444;font-weight:600}
+
+/* ==================== FORMS ==================== */
+.f{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.75rem}
+.g{display:flex;flex-direction:column;gap:.3rem}
+.g label{font-size:.8rem;font-weight:600;color:#555;letter-spacing:.01em}
+.g input,.g select{
+  padding:.55rem .75rem;border:1.5px solid var(--b);border-radius:8px;
+  font-size:.95rem;background:var(--i);transition:border-color .2s,background .2s
+}
+.g input:focus,.g select:focus{outline:none;border-color:var(--pl);background:#fff;box-shadow:0 0 0 3px rgba(41,128,185,.12)}
+.g input[type="number"]{text-align:right}
+
+/* ==================== BUTTONS ==================== */
+.btn{
+  padding:.65rem 1.25rem;border:none;border-radius:8px;cursor:pointer;
+  font-size:.9rem;font-weight:600;transition:all .15s;
+  display:inline-flex;align-items:center;gap:.4rem;
+  touch-action:manipulation;active:scale(.97)
+}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--p);color:#fff}.btn-p:hover{background:var(--pl)}
+.btn-s{background:var(--s);color:#fff}.btn-s:hover{background:#219a52}
+.btn-w{background:var(--w);color:#fff}.btn-w:hover{background:#d68910}
+.btn-r{background:var(--r);color:#fff}.btn-r:hover{background:#c0392b}
+.btn-gr{background:#6c757d;color:#fff}.btn-gr:hover{background:#545b62}
+.btn-g{display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap}
+
+/* ==================== TABLES ==================== */
+.tbl-wrap{overflow-x:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse;min-width:280px}
+th,td{padding:.55rem .65rem;text-align:left;border-bottom:1px solid var(--b);font-size:.875rem}
+th{background:#f0f4f8;font-weight:700;color:var(--p);white-space:nowrap}
+td:last-child,th:last-child{text-align:right;font-weight:500}
+input.tin{
+  width:100%;padding:.35rem .5rem;border:1px solid var(--b);
+  border-radius:4px;text-align:right;background:var(--i);font-size:.875rem
+}
+input.tin:focus{outline:none;border-color:var(--pl);background:#fff}
+.tr{background:#e2efda;font-weight:bold}
+
+/* ==================== RESULT BOX ==================== */
+.box{
+  background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
+  border-radius:10px;padding:1rem;margin-top:.75rem;
+  display:flex;align-items:baseline;gap:.5rem
+}
+.box h3{color:var(--s);font-size:.85rem;font-weight:700;margin-right:.25rem}
+.box .val{font-size:2rem;font-weight:bold;color:#1a5c2a}
+.box .uni{font-size:.95rem;color:#2a7a3a}
+
+/* ==================== PRESET GRID ==================== */
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:.4rem;margin-bottom:.75rem}
+.pb{
+  padding:.65rem .4rem;border:2px solid var(--b);border-radius:8px;
+  background:var(--c);cursor:pointer;text-align:center;transition:all .15s
+}
+.pb:active{transform:scale(.96)}
+.pb:hover{border-color:var(--pl);background:#f0f7ff}
+.pb.s{border-color:var(--p);background:#e3f2fd}
+.pb .sz{font-size:.95rem;font-weight:bold;color:var(--p)}
+.pb .ds{font-size:.7rem;color:#666;margin-top:.15rem}
+
+/* ==================== DEVIS PREVIEW ==================== */
+.bp{
+  background:#fff;border:1px solid var(--b);border-radius:8px;
+  padding:1.5rem;max-width:860px;margin:0 auto
+}
+.bh{text-align:center;margin-bottom:1.25rem;border-bottom:3px solid var(--p);padding-bottom:.85rem}
+.bh h2{color:var(--p);font-size:1.4rem;margin-bottom:.2rem}
+.final{
+  background:#e3f2fd;padding:1rem;border-radius:8px;
+  margin-top:1.25rem;border-left:4px solid var(--p)
+}
+.final p{color:var(--p);font-weight:bold;font-size:.95rem;line-height:1.7}
+
+/* ==================== TOAST ==================== */
+.toast{
+  position:fixed;top:1rem;left:50%;transform:translateX(-50%) translateY(-100px);
+  background:#222;color:#fff;padding:.65rem 1.25rem;border-radius:30px;
+  font-size:.875rem;font-weight:500;z-index:9999;
+  transition:transform .3s cubic-bezier(.175,.885,.32,1.275);
+  white-space:nowrap;pointer-events:none
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ==================== INSTALL BANNER ==================== */
+.install-banner{
+  background:linear-gradient(135deg,#1a3a5c,var(--p));
+  color:#fff;border-radius:var(--radius);padding:1rem;
+  margin-bottom:.75rem;display:flex;align-items:center;gap:.75rem;
+  box-shadow:var(--shadow);display:none
+}
+.install-banner.show{display:flex}
+.install-banner .ico{font-size:2rem}
+.install-banner .txt{flex:1}
+.install-banner .txt strong{display:block;font-size:.95rem;margin-bottom:.15rem}
+.install-banner .txt small{opacity:.8;font-size:.8rem}
+.btn-install{
+  background:#fff;color:var(--p);border:none;border-radius:8px;
+  padding:.55rem 1rem;font-weight:700;cursor:pointer;font-size:.85rem;
+  white-space:nowrap
+}
+.btn-dismiss{
+  background:transparent;border:none;color:rgba(255,255,255,.6);
+  cursor:pointer;font-size:1.2rem;padding:.25rem;line-height:1
+}
+
+/* ==================== PROJETS LIST ==================== */
+.proj-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem}
+.proj-item{
+  background:var(--i);border:1px solid var(--b);border-radius:8px;
+  padding:.75rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;
+  transition:border-color .2s
+}
+.proj-item:hover{border-color:var(--pl)}
+.proj-item .pi-info{flex:1;min-width:0}
+.proj-item .pi-name{font-weight:600;font-size:.9rem;color:var(--p);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-item .pi-date{font-size:.75rem;color:#888;margin-top:.1rem}
+.proj-item .pi-vol{font-size:.8rem;font-weight:700;color:var(--s)}
+.pi-del{background:none;border:none;cursor:pointer;color:#ccc;font-size:1.1rem;padding:.25rem;transition:color .2s}
+.pi-del:hover{color:var(--r)}
+.empty-state{text-align:center;padding:2rem 1rem;color:#aaa}
+.empty-state .es-ico{font-size:2.5rem;margin-bottom:.5rem}
+.empty-state p{font-size:.9rem}
+
+/* ==================== UPDATE BANNER ==================== */
+.update-banner{
+  position:fixed;bottom:70px;left:.75rem;right:.75rem;
+  background:var(--p);color:#fff;border-radius:10px;
+  padding:.75rem 1rem;display:none;z-index:200;
+  align-items:center;gap:.75rem;box-shadow:var(--shadow)
+}
+.update-banner.show{display:flex}
+
+/* ==================== PRINT ==================== */
+@media print{
+  .np{display:none!important}
+  .tabs{display:none!important}
+  body{padding-bottom:0}
+  .card{box-shadow:none;border:1px solid #ddd}
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media(max-width:640px){
+  .f{grid-template-columns:1fr 1fr}
+  .pg{grid-template-columns:repeat(3,1fr)}
+  .bp{padding:1rem}
+}
+@media(max-width:400px){
+  .f{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="m">
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Update available banner -->
+  <div class="update-banner" id="updateBanner">
+    <span style="flex:1;font-size:.875rem">🔄 Mise à jour disponible !</span>
+    <button class="btn" style="background:#fff;color:var(--p);font-size:.8rem;padding:.4rem .75rem" onclick="doUpdate()">Mettre à jour</button>
+  </div>
+
+  <!-- Install banner -->
+  <div class="install-banner" id="installBanner">
+    <div class="ico">📲</div>
+    <div class="txt">
+      <strong>Installer l'application</strong>
+      <small>Accès hors-ligne, sur l'écran d'accueil</small>
+    </div>
+    <button class="btn-install" id="btnInstall">Installer</button>
+    <button class="btn-dismiss" onclick="dismissInstall()">✕</button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <h1>Calculateur Dalot</h1>
+        <p>Volume béton · Coût prévisionnel des matériaux</p>
+      </div>
+      <div class="offline-badge" id="offlineBadge">Hors-ligne</div>
+    </div>
+    <div class="dev-credit">
+      Développé par <strong>N'DJARABA Hodabalo</strong> · Ingénieur des Travaux Génie Civil · Tél : 70 06 08 43
+    </div>
+  </div>
+
+  <!-- Tab contents -->
+  <div id="tc" class="tab-content active">
+    <div class="card"><h2>📦 Type de Dalot</h2>
+      <div class="pg" id="pg"></div>
+      <div class="g" style="max-width:260px">
+        <label>Mode de saisie</label>
+        <select id="cm" onchange="tcm()">
+          <option value="p">Prédéfini</option>
+          <option value="c">Personnalisé</option>
+        </select>
+      </div>
+    </div>
+    <div class="card"><h2>📏 DALOT (Corps d'ouvrage)</h2><div class="f">
+      <div class="g"><label>Largeur interne (cm)</label><input type="number" id="li" value="100" onchange="calc()"></div>
+      <div class="g"><label>Hauteur interne (cm)</label><input type="number" id="hi" value="100" onchange="calc()"></div>
+      <div class="g"><label>Longueur (cm)</label><input type="number" id="lo" value="900" onchange="calc()"></div>
+      <div class="g"><label>Épaisseur murs (cm)</label><input type="number" id="em" value="20" onchange="calc()"></div>
+    </div></div>
+    <div class="card"><h2>🔲 TABLIER</h2><div class="f">
+      <div class="g"><label>Longueur (cm)</label><input type="number" id="tl" value="940" onchange="calc()"></div>
+      <div class="g"><label>Largeur (cm)</label><input type="number" id="tLa" value="140" onchange="calc()"></div>
+      <div class="g"><label>Épaisseur (cm)</label><input type="number" id="te" value="20" onchange="calc()"></div>
+    </div></div>
+    <div class="card"><h2>🧱 PIÉDROITS (2 murs)</h2><div class="f">
+      <div class="g"><label>Longueur (cm)</label><input type="number" id="pl" value="900" onchange="calc()"></div>
+      <div class="g"><label>Épaisseur (cm)</label><input type="number" id="pe" value="20" onchange="calc()"></div>
+      <div class="g"><label>Hauteur (cm)</label><input type="number" id="ph" value="100" onchange="calc()"></div>
+    </div></div>
+    <div class="card"><h2>🔧 GUIDES ROUX (2)</h2><div class="f">
+      <div class="g"><label>Longueur (cm)</label><input type="number" id="gl" value="140" onchange="calc()"></div>
+      <div class="g"><label>Épaisseur (cm)</label><input type="number" id="ge" value="20" onchange="calc()"></div>
+      <div class="g"><label>Hauteur (cm)</label><input type="number" id="gh" value="40" onchange="calc()"></div>
+    </div></div>
+    <div class="card"><h2>🪨 BÊCHES (2)</h2><div class="f">
+      <div class="g"><label>Longueur totale (cm)</label><input type="number" id="bl" value="360" onchange="calc()"></div>
+      <div class="g"><label>Largeur (cm)</label><input type="number" id="bLa" value="20" onchange="calc()"></div>
+      <div class="g"><label>Hauteur (cm)</label><input type="number" id="bh" value="70" onchange="calc()"></div>
+    </div></div>
+    <div class="card"><h2>🛤️ RADIER OT</h2>
+      <h3>Rectangulaire</h3><div class="f">
+        <div class="g"><label>Longueur (cm)</label><input type="number" id="rl" value="940" onchange="calc()"></div>
+        <div class="g"><label>Largeur (cm)</label><input type="number" id="rLa" value="140" onchange="calc()"></div>
+        <div class="g"><label>Épaisseur (cm)</label><input type="number" id="re" value="20" onchange="calc()"></div>
+      </div>
+      <h3>Entonnoirs</h3><div class="f">
+        <div class="g"><label>Petite base (cm)</label><input type="number" id="el1" value="140" onchange="calc()"></div>
+        <div class="g"><label>Grande base (cm)</label><input type="number" id="el2" value="406" onchange="calc()"></div>
+        <div class="g"><label>Profondeur (cm)</label><input type="number" id="ep" value="194" onchange="calc()"></div>
+        <div class="g"><label>Épaisseur (cm)</label><input type="number" id="ee" value="20" onchange="calc()"></div>
+      </div>
+    </div>
+    <div class="card"><h2>🧱 Murs en Ailes (4)</h2><div class="f">
+      <div class="g"><label>Longueur (cm)</label><input type="number" id="mal" value="194" onchange="calc()"></div>
+      <div class="g"><label>Épaisseur (cm)</label><input type="number" id="mae" value="20" onchange="calc()"></div>
+      <div class="g"><label>Hauteur moy. (cm)</label><input type="number" id="mah" value="85" onchange="calc()"></div>
+    </div></div>
+    <div class="card"><h2>🏛️ Murs en Retour (4)</h2><div class="f">
+      <div class="g"><label>Longueur (cm)</label><input type="number" id="mrl" value="300" onchange="calc()"></div>
+      <div class="g"><label>Épaisseur (cm)</label><input type="number" id="mre" value="20" onchange="calc()"></div>
+      <div class="g"><label>Hauteur (cm)</label><input type="number" id="mrh" value="70" onchange="calc()"></div>
+    </div></div>
+    <div class="card"><h2>📐 Semelles MR (4)</h2><div class="f">
+      <div class="g"><label>Longueur (cm)</label><input type="number" id="sl" value="300" onchange="calc()"></div>
+      <div class="g"><label>Largeur (cm)</label><input type="number" id="sLa" value="70" onchange="calc()"></div>
+      <div class="g"><label>Épaisseur (cm)</label><input type="number" id="se" value="20" onchange="calc()"></div>
+    </div></div>
+    <div class="btn-g np">
+      <button class="btn btn-p" onclick="calc()">🔄 Recalculer</button>
+      <button class="btn btn-s" onclick="st('re')">📊 Résultats →</button>
+    </div>
+  </div>
+
+  <div id="tpr" class="tab-content">
+    <div class="card"><h2>💰 Prix Unitaires</h2>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Matériau</th><th>Unité</th><th>Prix (FCFA)</th></tr></thead>
+        <tbody>
+          <tr><td>Ciment</td><td>tonne</td><td><input type="number" class="tin" id="pc" value="90000" onchange="calc()"></td></tr>
+          <tr><td>Sable</td><td>m³</td><td><input type="number" class="tin" id="ps" value="7000" onchange="calc()"></td></tr>
+          <tr><td>Gravier</td><td>m³</td><td><input type="number" class="tin" id="pgv" value="19000" onchange="calc()"></td></tr>
+          <tr><td>Eau</td><td>m³</td><td><input type="number" class="tin" id="pea" value="100" onchange="calc()"></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="card"><h2>⚙️ Dosage</h2><div class="f">
+      <div class="g"><label>Dosage (kg/m³)</label>
+        <select id="dos" onchange="calc()">
+          <option value="350" selected>350 kg/m³</option>
+          <option value="300">300 kg/m³</option>
+          <option value="400">400 kg/m³</option>
+        </select>
+      </div>
+    </div></div>
+    <div class="btn-g np"><button class="btn btn-s" onclick="st('bo')">📋 Devis →</button></div>
+  </div>
+
+  <div id="tre" class="tab-content">
+    <div class="card"><h2>📊 Volumes par élément</h2>
+      <div class="tbl-wrap">
+        <table id="vt">
+          <thead><tr><th>Élément</th><th>Volume (m³)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="box"><h3>Total :</h3><span class="val" id="vtot">0.000</span><span class="uni">m³</span></div>
+    </div>
+    <div class="card"><h2>📦 Quantités de matériaux</h2>
+      <div class="tbl-wrap">
+        <table id="mt">
+          <thead><tr><th>Matériau</th><th>Quantité</th><th>Unité</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="btn-g np"><button class="btn btn-s" onclick="st('bo')">📋 Devis →</button></div>
+  </div>
+
+  <div id="tbo" class="tab-content">
+    <div class="card np"><h2>🏢 Entreprise</h2><div class="f">
+      <div class="g"><label>Nom entreprise</label><input type="text" id="enom" onchange="ub()"></div>
+      <div class="g"><label>Adresse</label><input type="text" id="eadr" onchange="ub()"></div>
+      <div class="g"><label>Téléphone</label><input type="text" id="etel" onchange="ub()"></div>
+      <div class="g"><label>Nom du projet</label><input type="text" id="proj" value="Dalot" onchange="ub()"></div>
+      <div class="g"><label>Date</label><input type="date" id="dat" onchange="ub()"></div>
+      <div class="g"><label>N° Devis</label><input type="text" id="num" value="DV-001" onchange="ub()"></div>
+    </div></div>
+    <div class="bp" id="bc"></div>
+    <div class="btn-g np">
+      <button class="btn btn-p" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="btn btn-r" onclick="dopdf()">📥 Export PDF</button>
+      <button class="btn btn-s" onclick="saveProjet()">💾 Sauvegarder</button>
+      <button class="btn btn-w" onclick="st('c')">← Config</button>
+    </div>
+  </div>
+
+  <div id="tpj" class="tab-content">
+    <div class="card">
+      <h2>💾 Projets sauvegardés</h2>
+      <div id="projList"></div>
+    </div>
+    <div class="card">
+      <h2>⚙️ Gestion</h2>
+      <div class="btn-g">
+        <button class="btn btn-gr" onclick="exportAll()">📤 Exporter tout (JSON)</button>
+        <button class="btn btn-r" onclick="clearAll()">🗑️ Tout supprimer</button>
+      </div>
+      <p style="font-size:.8rem;color:#888;margin-top:.5rem">Les données sont stockées localement sur cet appareil (IndexedDB).</p>
+    </div>
+  </div>
+
+</div><!-- end .m -->
+
+<!-- Bottom Tab Bar -->
+<nav class="tabs np">
+  <button class="tab-btn active" onclick="st('c')">
+    <div class="ico-wrap"><span class="ico">📐</span></div>
+    <span>Config</span>
+  </button>
+  <button class="tab-btn" onclick="st('pr')">
+    <div class="ico-wrap"><span class="ico">💰</span></div>
+    <span>Prix</span>
+  </button>
+  <button class="tab-btn" onclick="st('re')">
+    <div class="ico-wrap"><span class="ico">📊</span></div>
+    <span>Résultats</span>
+  </button>
+  <button class="tab-btn" onclick="st('bo')">
+    <div class="ico-wrap"><span class="ico">📋</span></div>
+    <span>Devis</span>
+  </button>
+  <button class="tab-btn" onclick="st('pj')">
+    <div class="ico-wrap"><span class="ico">💾</span></div>
+    <span>Projets</span>
+  </button>
+</nav>
+
+<script>
+/* ============================================================
+   DONNÉES & ÉTAT
+   ============================================================ */
+const PRESETS = [
+  {n:'1×1×8',l:100,h:100,L:800},{n:'1×1×9',l:100,h:100,L:900},
+  {n:'1.5×1×8',l:150,h:100,L:800},{n:'2×1×8',l:200,h:100,L:800},
+  {n:'2×1×9',l:200,h:100,L:900},{n:'2×1.5×8',l:200,h:150,L:800},
+  {n:'2×2×8',l:200,h:200,L:800},{n:'3×2×8',l:300,h:200,L:800}
+];
+let cp = 1, cd = {};
+
+/* ============================================================
+   INDEXEDDB
+   ============================================================ */
+const DB_NAME = 'DalotBetonDB', DB_VER = 1, STORE = 'projets';
+let db = null;
+
+function openDB(){
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains(STORE)){
+        const st = d.createObjectStore(STORE, {keyPath:'id', autoIncrement:true});
+        st.createIndex('date', 'date', {unique:false});
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror   = e => { rej(e.target.error); };
+  });
+}
+
+function dbSave(record){
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).add(record);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbGetAll(){
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbDelete(id){
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).delete(id);
+    req.onsuccess = () => res();
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbClear(){
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).clear();
+    req.onsuccess = () => res();
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+/* ============================================================
+   PROJETS UI
+   ============================================================ */
+async function saveProjet(){
+  const nom   = document.getElementById('proj').value || 'Sans titre';
+  const num   = document.getElementById('num').value;
+  const total = calcTotal();
+  const snap  = captureState();
+  await dbSave({
+    nom, num, date: new Date().toISOString(), total,
+    snap, vol: cd.t ? cd.t.toFixed(3) : '0'
+  });
+  showToast('✅ Projet sauvegardé !');
+  if(document.getElementById('tpj').classList.contains('active')) renderProjets();
+}
+
+async function renderProjets(){
+  const list  = await dbGetAll();
+  const el    = document.getElementById('projList');
+  if(!list.length){
+    el.innerHTML='<div class="empty-state"><div class="es-ico">📭</div><p>Aucun projet sauvegardé</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="proj-list">' + list.slice().reverse().map(p => `
+    <div class="proj-item" onclick="loadProjet(${p.id})">
+      <div class="pi-info">
+        <div class="pi-name">${p.nom} — ${p.num}</div>
+        <div class="pi-date">${new Date(p.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+        <div class="pi-vol">Volume : ${p.vol} m³ · Total : ${Math.round(p.total||0).toLocaleString()} FCFA</div>
+      </div>
+      <button class="pi-del" onclick="event.stopPropagation();delProjet(${p.id})">🗑️</button>
+    </div>`).join('') + '</div>';
+}
+
+async function loadProjet(id){
+  const list = await dbGetAll();
+  const p    = list.find(x => x.id === id);
+  if(!p) return;
+  restoreState(p.snap);
+  showToast('📂 Projet chargé : ' + p.nom);
+  st('c');
+}
+
+async function delProjet(id){
+  if(!confirm('Supprimer ce projet ?')) return;
+  await dbDelete(id);
+  renderProjets();
+  showToast('🗑️ Projet supprimé');
+}
+
+async function clearAll(){
+  if(!confirm('Supprimer tous les projets ?')) return;
+  await dbClear();
+  renderProjets();
+  showToast('🗑️ Tout supprimé');
+}
+
+async function exportAll(){
+  const list = await dbGetAll();
+  const blob = new Blob([JSON.stringify(list, null, 2)], {type:'application/json'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'projets_dalot_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  showToast('📤 Export téléchargé');
+}
+
+/* ============================================================
+   CAPTURE & RESTORE STATE (pour IndexedDB)
+   ============================================================ */
+const FIELDS = ['li','hi','lo','em','tl','tLa','te','pl','pe','ph','gl','ge','gh',
+  'bl','bLa','bh','rl','rLa','re','el1','el2','ep','ee','mal','mae','mah',
+  'mrl','mre','mrh','sl','sLa','se','pc','ps','pgv','pea','dos','proj','num',
+  'enom','eadr','etel','dat'];
+
+function captureState(){
+  const s = {};
+  FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) s[id] = el.value;
+  });
+  s._preset = cp;
+  return s;
+}
+
+function restoreState(s){
+  if(!s) return;
+  FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if(el && s[id] !== undefined) el.value = s[id];
+  });
+  if(s._preset !== undefined){
+    cp = s._preset;
+    document.querySelectorAll('.pb').forEach((b,j) => b.classList.toggle('s', j===cp));
+  }
+  calc();
+  ub();
+}
+
+/* ============================================================
+   CALCUL BÉTON
+   ============================================================ */
+function gv(id){ return parseFloat(document.getElementById(id).value)||0; }
+function toM(v){ return v/1e6; }
+
+function calcTotal(){
+  if(!cd.m) return 0;
+  const p=gv('pc'),s=gv('ps'),g=gv('pgv'),e=gv('pea'),m=cd.m;
+  return m.c*p + m.s*s + m.g*g + m.e*e;
+}
+
+function calc(){
+  const d={
+    li:gv('li'),hi:gv('hi'),lo:gv('lo'),em:gv('em'),
+    tl:gv('tl'),tLa:gv('tLa'),te:gv('te'),
+    pl:gv('pl'),pe:gv('pe'),ph:gv('ph'),
+    gl:gv('gl'),ge:gv('ge'),gh:gv('gh'),
+    bl:gv('bl'),bLa:gv('bLa'),bh:gv('bh'),
+    rl:gv('rl'),rLa:gv('rLa'),re:gv('re'),
+    el1:gv('el1'),el2:gv('el2'),ep:gv('ep'),ee:gv('ee'),
+    mal:gv('mal'),mae:gv('mae'),mah:gv('mah'),
+    mrl:gv('mrl'),mre:gv('mre'),mrh:gv('mrh'),
+    sl:gv('sl'),sLa:gv('sLa'),se:gv('se')
+  };
+  cd.dim = d;
+
+  const vT  = toM(d.tl*d.tLa*d.te);
+  const vP  = toM(2*d.pl*d.pe*d.ph);
+  const vG  = toM(2*d.gl*d.ge*d.gh);
+  const vRR = toM(d.rl*d.rLa*d.re);
+  const vE  = toM(2*((d.el1+d.el2)/2)*d.ep*d.ee);
+  const vB  = toM(2*d.bl*d.bLa*d.bh);
+  const vMA = toM(4*d.mal*d.mae*d.mah);
+  const vMR = toM(4*d.mrl*d.mre*d.mrh);
+  const vS  = toM(4*d.sl*d.sLa*d.se);
+  const tot = vT+vP+vG+vRR+vE+vB+vMA+vMR+vS;
+
+  cd.v = [
+    {n:'Tablier',v:vT},{n:'Piédroits',v:vP},{n:'Guides',v:vG},
+    {n:'Radier OT',v:vRR},{n:'Entonnoirs',v:vE},{n:'Bêches',v:vB},
+    {n:'Murs ailes',v:vMA},{n:'Murs retour',v:vMR},{n:'Semelles',v:vS}
+  ];
+  cd.t = tot;
+
+  const dos = gv('dos');
+  cd.m = {
+    c: tot*dos/1000*1.05,
+    s: tot*dos*120/1e5*1.1,
+    g: tot*dos*200/1e5*1.1,
+    e: tot*dos/50*20/1000*1.05
+  };
+
+  // Update volumes table
+  const vTbody = document.getElementById('vt').querySelector('tbody');
+  vTbody.innerHTML = cd.v.map(r =>
+    `<tr><td>${r.n}</td><td>${r.v.toFixed(3)}</td></tr>`
+  ).join('') + `<tr class="tr"><td>TOTAL</td><td>${tot.toFixed(3)}</td></tr>`;
+  document.getElementById('vtot').textContent = tot.toFixed(3);
+
+  // Update materials table
+  document.getElementById('mt').querySelector('tbody').innerHTML =
+    `<tr><td>Ciment</td><td>${cd.m.c.toFixed(2)}</td><td>t</td></tr>
+     <tr><td>Sable</td><td>${cd.m.s.toFixed(2)}</td><td>m³</td></tr>
+     <tr><td>Gravier</td><td>${cd.m.g.toFixed(2)}</td><td>m³</td></tr>
+     <tr><td>Eau</td><td>${cd.m.e.toFixed(2)}</td><td>m³</td></tr>`;
+}
+
+/* ============================================================
+   DÉVIS HTML
+   ============================================================ */
+function ub(){
+  if(!cd.m) calc();
+  const p=gv('pc'),s=gv('ps'),g=gv('pgv'),e=gv('pea'),m=cd.m;
+  const tc=m.c*p, ts=m.s*s, tg=m.g*g, te=m.e*e, tt=tc+ts+tg+te;
+  const en=document.getElementById('enom').value,
+        ea=document.getElementById('eadr').value,
+        et=document.getElementById('etel').value;
+
+  let entBlock='';
+  if(en||ea||et) entBlock=`
+    <div style="background:#f8f9fa;padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid #e8ecf1">
+      <h3 style="color:#1f4e79;margin-bottom:.5rem">Entreprise</h3>
+      <div><strong>${en}</strong></div>
+      <div>${ea}</div>
+      <div>${et?'Tel: '+et:''}</div>
+    </div>`;
+
+  document.getElementById('bc').innerHTML = entBlock + `
+    <div class="bh">
+      <h2>COÛT PRÉVISIONNEL DES MATÉRIAUX</h2>
+      <p>${document.getElementById('proj').value} — ${document.getElementById('num').value}</p>
+      <p>Date : ${document.getElementById('dat').value}</p>
+    </div>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Matériau</th><th>Qté</th><th>Unité</th><th>P.U. (FCFA)</th><th>Montant</th></tr></thead>
+      <tbody>
+        <tr><td>Ciment</td><td>${m.c.toFixed(2)}</td><td>t</td><td>${p.toLocaleString()}</td><td>${Math.round(tc).toLocaleString()}</td></tr>
+        <tr><td>Sable</td><td>${m.s.toFixed(2)}</td><td>m³</td><td>${s.toLocaleString()}</td><td>${Math.round(ts).toLocaleString()}</td></tr>
+        <tr><td>Gravier</td><td>${m.g.toFixed(2)}</td><td>m³</td><td>${g.toLocaleString()}</td><td>${Math.round(tg).toLocaleString()}</td></tr>
+        <tr><td>Eau</td><td>${m.e.toFixed(2)}</td><td>m³</td><td>${e.toLocaleString()}</td><td>${Math.round(te).toLocaleString()}</td></tr>
+        <tr class="tr"><td colspan="4">TOTAL</td><td>${Math.round(tt).toLocaleString()} FCFA</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="final">
+      <p>Le présent devis est arrêté à la somme de <strong>${nb(Math.round(tt))}</strong><br>
+      soit <strong>${Math.round(tt).toLocaleString()} FCFA</strong>.</p>
+    </div>`;
+}
+
+/* ============================================================
+   EXPORT PDF AMÉLIORÉ
+   ============================================================ */
+
+/* Formatage des nombres avec espace insécable comme séparateur de milliers
+   (évite le "/" produit par toLocaleString sur certains Android) */
+function fmt(n){
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+}
+
+function dopdf(){
+  const {jsPDF} = window.jspdf;
+  const d = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  const W = d.internal.pageSize.getWidth();
+  const H = d.internal.pageSize.getHeight();
+  const BLUE    = [31, 78, 121];
+  const LBLUE   = [227, 242, 253];
+  const LGREEN  = [226, 239, 218];
+
+  const en  = document.getElementById('enom').value;
+  const ea  = document.getElementById('eadr').value;
+  const et  = document.getElementById('etel').value;
+  const prj = document.getElementById('proj').value;
+  const num = document.getElementById('num').value;
+  const dat = document.getElementById('dat').value;
+  const m   = cd.m;
+  const pc  = gv('pc'), ps = gv('ps'), pg = gv('pgv'), pe2 = gv('pea');
+  const tc  = m.c*pc, ts = m.s*ps, tg = m.g*pg, te = m.e*pe2, tt = tc+ts+tg+te;
+
+  /* ------ En-tête bleue ------ */
+  d.setFillColor(...BLUE);
+  d.rect(0, 0, W, 38, 'F');
+
+  d.setFont('helvetica','bold');
+  d.setFontSize(18);
+  d.setTextColor(255,255,255);
+  d.text('COUT PREVISIONNEL DES MATERIAUX', W/2, 16, {align:'center'});
+  d.setFontSize(11);
+  d.setFont('helvetica','normal');
+  d.text(prj + '  -  ' + num + '  -  ' + dat, W/2, 25, {align:'center'});
+
+  d.setFillColor(39,174,96);
+  d.rect(0, 38, W, 1.5, 'F');
+
+  let y = 48;
+
+  /* ------ Bloc entreprise ------ */
+  if(en||ea||et){
+    d.setFillColor(248,249,250);
+    d.roundedRect(14, y, W-28, 22, 3, 3, 'F');
+    d.setDrawColor(200);
+    d.setLineWidth(0.3);
+    d.roundedRect(14, y, W-28, 22, 3, 3, 'S');
+    d.setFontSize(8);
+    d.setFont('helvetica','bold');
+    d.setTextColor(...BLUE);
+    d.text('ENTREPRISE', 19, y+6);
+    d.setFont('helvetica','bold');
+    d.setFontSize(10);
+    d.setTextColor(30,30,30);
+    if(en){ d.text(en, 19, y+12); }
+    d.setFont('helvetica','normal');
+    d.setFontSize(9);
+    d.setTextColor(80,80,80);
+    let ey = y + (en ? 17 : 12);
+    if(ea){ d.text(ea, 19, ey); ey+=5; }
+    if(et){ d.text('Tel : '+et, 19, ey); }
+    y += 28;
+  }
+
+  /* ------ TABLEAU 1 : Matériaux & coûts ------ */
+  d.autoTable({
+    startY: y,
+    head: [['Materiau','Quantite','Unite','Prix unitaire (FCFA)','Montant (FCFA)']],
+    body: [
+      ['Ciment',  m.c.toFixed(2), 't',   fmt(pc),  fmt(tc)],
+      ['Sable',   m.s.toFixed(2), 'm3',  fmt(ps),  fmt(ts)],
+      ['Gravier', m.g.toFixed(2), 'm3',  fmt(pg),  fmt(tg)],
+      ['Eau',     m.e.toFixed(2), 'm3',  fmt(pe2), fmt(te)],
+    ],
+    foot: [['','','','TOTAL GENERAL', fmt(tt) + ' FCFA']],
+    theme: 'grid',
+    styles: {fontSize:10, cellPadding:3.5, valign:'middle'},
+    headStyles: {fillColor:BLUE, textColor:255, fontStyle:'bold', halign:'center'},
+    footStyles: {fillColor:LGREEN, textColor:BLUE, fontStyle:'bold', halign:'right', fontSize:11},
+    columnStyles: {
+      0:{fontStyle:'bold'},
+      1:{halign:'right'},
+      3:{halign:'right'},
+      4:{halign:'right', fontStyle:'bold'}
+    },
+    alternateRowStyles: {fillColor:[248,252,255]},
+    margin:{left:14, right:14}
+  });
+
+  y = d.lastAutoTable.finalY + 10;
+
+  /* ------ BLOC ARRÊTÉ DU DEVIS (juste après le tableau matériaux) ------ */
+  if(y > H - 60){ d.addPage(); y = 20; }
+
+  // Calculer le texte et sa hauteur réelle avant de dessiner le cadre
+  d.setFont('helvetica','normal');
+  d.setFontSize(10);
+  const arreteTxt = 'Le present devis est arrete a la somme de ' +
+    nb(Math.round(tt)) + ' (' + fmt(tt) + ' FCFA).';
+  const arreteLines = d.splitTextToSize(arreteTxt, W - 46);
+  const lineH    = 5.5; // hauteur par ligne en mm
+  const boxH     = 10 + arreteLines.length * lineH; // 10 = marges haut/bas
+
+  d.setFillColor(...LBLUE);
+  d.roundedRect(14, y, W-28, boxH, 3, 3, 'F');
+  d.setDrawColor(...BLUE);
+  d.setLineWidth(0.5);
+  d.roundedRect(14, y, W-28, boxH, 3, 3, 'S');
+
+  d.setFont('helvetica','bold');
+  d.setFontSize(9);
+  d.setTextColor(...BLUE);
+  d.text('ARRETE DU DEVIS', 19, y+6);
+
+  d.setFont('helvetica','normal');
+  d.setFontSize(10);
+  d.setTextColor(30, 50, 90);
+  d.text(arreteLines, 19, y + 12);
+
+  y += boxH + 10;
+
+  /* ------ TABLEAU 2 : Volumes (après l'arrêté) ------ */
+  if(y > H - 80){ d.addPage(); y = 20; }
+
+  d.setFont('helvetica','bold');
+  d.setFontSize(11);
+  d.setTextColor(...BLUE);
+  d.text('Detail des volumes de beton', 14, y);
+  y += 4;
+
+  d.autoTable({
+    startY: y,
+    head: [['Element','Volume (m3)']],
+    body: cd.v.map(r => [r.n, r.v.toFixed(3)]),
+    foot: [['VOLUME TOTAL', cd.t.toFixed(3) + ' m3']],
+    theme: 'striped',
+    styles: {fontSize:9, cellPadding:2.5},
+    headStyles: {fillColor:[52,100,140], textColor:255, fontStyle:'bold'},
+    footStyles: {fillColor:LGREEN, textColor:BLUE, fontStyle:'bold'},
+    columnStyles: {1:{halign:'right', fontStyle:'bold'}},
+    margin:{left:14, right:14}
+  });
+
+  /* ------ Pied de page ------ */
+  const footY = H - 10;
+  d.setFillColor(...BLUE);
+  d.rect(0, footY - 6, W, 16, 'F');
+  d.setFont('helvetica','italic');
+  d.setFontSize(8);
+  d.setTextColor(255,255,255);
+  d.text('Document genere par Calculateur Dalot PWA - ' + new Date().toLocaleDateString('fr-FR'), W/2, footY, {align:'center'});
+
+  d.save('devis_' + prj.replace(/\s+/g,'_') + '_' + num + '.pdf');
+  showToast('PDF telecharge !');
+}
+
+/* ============================================================
+   UTILITAIRES
+   ============================================================ */
+function st(t){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  // Find tab btn by its onclick
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if(b.getAttribute('onclick') === `st('${t}')`) b.classList.add('active');
+  });
+  document.getElementById('t'+t).classList.add('active');
+  if(t==='bo') ub();
+  if(t==='pj') renderProjets();
+}
+
+function tcm(){
+  const m = document.getElementById('cm').value;
+  document.querySelectorAll('.pb').forEach(b => {
+    b.style.pointerEvents = m==='p' ? 'auto' : 'none';
+    b.style.opacity = m==='p' ? '1' : '0.4';
+  });
+}
+
+function sp(i){
+  cp = i;
+  const p = PRESETS[i];
+  document.getElementById('li').value = p.l;
+  document.getElementById('hi').value = p.h;
+  document.getElementById('lo').value = p.L;
+  document.getElementById('tl').value  = Math.round(940*p.L/900);
+  document.getElementById('rl').value  = Math.round(940*p.L/900);
+  document.getElementById('ep').value  = Math.round(194*p.L/900);
+  document.getElementById('mal').value = Math.round(194*p.L/900);
+  document.querySelectorAll('.pb').forEach((b,j) => b.classList.toggle('s', j===i));
+  calc();
+}
+
+/* -------- Toast -------- */
+let toastTimer;
+function showToast(msg, dur=2500){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+/* -------- Nombres en lettres (fr) -------- */
+function nb(n){
+  const u=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix',
+    'onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'];
+  const ds=['','','vingt','trente','quarante','cinquante','soixante','soixante','quatre-vingt','quatre-vingt'];
+  if(n<20) return u[n];
+  if(n<100){
+    const e=n%10, dz=Math.floor(n/10);
+    if(dz===7||dz===9) return ds[dz]+(e===1&&dz!==9?' et ':'-')+(e===1&&dz===7?'et un':u[e+(dz===7?10:0)]);
+    return ds[dz]+(e===1?' et ':e?'-':'')+u[e];
+  }
+  if(n<1000){
+    const c=Math.floor(n/100), r=n%100;
+    return(c===1?'cent':u[c]+' cent')+(r>0?' '+nb(r):'s');
+  }
+  if(n<1000000){
+    const k=Math.floor(n/1000), r=n%1000;
+    return(k===1?'mille':nb(k)+' mille')+(r>0?' '+nb(r):'');
+  }
+  const m2=Math.floor(n/1000000), r=n%1000000;
+  return(m2===1?'un million':nb(m2)+' millions')+(r>0?' '+nb(r):'');
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init(){
+  document.getElementById('pg').innerHTML = PRESETS.map((p,i) =>
+    `<button class="pb ${i===cp?'s':''}" onclick="sp(${i})">
+      <div class="sz">${p.n}</div>
+    </button>`
+  ).join('');
+  document.getElementById('dat').valueAsDate = new Date();
+  calc();
+  ub();
+}
+
+/* ============================================================
+   PWA — SERVICE WORKER
+   ============================================================ */
+let swReg = null;
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', async () => {
+    try {
+      swReg = await navigator.serviceWorker.register('./sw.js');
+      swReg.addEventListener('updatefound', () => {
+        const newSW = swReg.installing;
+        newSW.addEventListener('statechange', () => {
+          if(newSW.state === 'installed' && navigator.serviceWorker.controller){
+            document.getElementById('updateBanner').classList.add('show');
+          }
+        });
+      });
+    } catch(e){ console.warn('SW registration failed:', e); }
+  });
+}
+
+function doUpdate(){
+  if(swReg && swReg.waiting){
+    swReg.waiting.postMessage({type:'SKIP_WAITING'});
+  }
+  window.location.reload();
+}
+
+/* ============================================================
+   PWA — INSTALL PROMPT (Android / Chrome)
+   ============================================================ */
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show banner only if not already installed
+  if(!window.matchMedia('(display-mode: standalone)').matches){
+    document.getElementById('installBanner').classList.add('show');
+  }
+});
+
+document.getElementById('btnInstall').addEventListener('click', async () => {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBanner').classList.remove('show');
+  if(outcome === 'accepted') showToast('🎉 Application installée !');
+});
+
+function dismissInstall(){
+  document.getElementById('installBanner').classList.remove('show');
+  deferredPrompt = null;
+}
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  showToast('✅ App installée sur l\'écran d\'accueil');
+});
+
+/* ============================================================
+   OFFLINE INDICATOR
+   ============================================================ */
+function updateOnlineStatus(){
+  const badge = document.getElementById('offlineBadge');
+  if(!navigator.onLine){
+    badge.classList.add('show');
+    showToast('📵 Mode hors-ligne activé', 4000);
+  } else {
+    badge.classList.remove('show');
+  }
+}
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+/* ============================================================
+   DÉMARRAGE
+   ============================================================ */
+openDB()
+  .then(() => { init(); updateOnlineStatus(); })
+  .catch(err => { console.error('IndexedDB error:', err); init(); });
+</script>
+</body>
+</html>
